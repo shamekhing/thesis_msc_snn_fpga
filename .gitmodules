@@ -1,0 +1,8 @@
+[submodule "code/fpga-snn"]
+	path = code/fpga-snn
+	url = https://github.com/shamekhing/fpga-snn.git
+	branch = handover-paper-faithful-snn
+[submodule "code/fpga-skill"]
+	path = code/fpga-skill
+	url = https://github.com/shamekhing/fpga-gowin.git
+	branch = main

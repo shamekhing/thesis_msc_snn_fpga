@@ -1,0 +1,12 @@
+# Search-tool exclusions (ripgrep, fd, VS Code Ignore extension).
+# Git-level rules live in .gitignore; this file additionally hides heavy
+# or generated files from editor/CLI search even when they are tracked.
+
+# Reference PDF library (tracked, binary, not searchable text)
+report/resources/
+
+# Compiled report output
+main.pdf
+
+# Datasets kept locally under the SNN code project
+code/fpga-snn/data/

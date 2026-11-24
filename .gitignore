@@ -1,0 +1,42 @@
+# Global ignore rules for this repository (LaTeX report + code).
+# Note: code/fpga-snn and code/fpga-skill are nested repositories and
+# manage their own ignore files.
+
+# --- LaTeX build artifacts (report/) ---
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.synctex.gz
+*.synctex(busy)
+*.toc
+main.pdf
+
+# --- Python caches and virtual environments ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- HDL simulation and synthesis output ---
+*.vvp
+*.vcd
+*.wdb
+*.fst
+*.gtkw
+
+# --- OS and editor junk ---
+.DS_Store
+Thumbs.db
+*~
+*.swp
