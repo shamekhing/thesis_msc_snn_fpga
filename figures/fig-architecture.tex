@@ -1,0 +1,47 @@
+\begin{figure}[!htbp]
+\centering
+\resizebox{0.95\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\small,
+  >=Stealth,
+  cont/.style={draw,dashed,rounded corners=4pt,black!60},
+  tealbox/.style={draw=teal!60!black,fill=teal!12,rounded corners=3pt,align=center,minimum height=1.2cm},
+  purpbox/.style={draw=violet!70!black,fill=violet!10,rounded corners=3pt,align=center,minimum height=1.2cm},
+  greybox/.style={draw=black!50,fill=black!6,rounded corners=3pt,align=center,minimum height=1.2cm},
+  arr/.style={-{Stealth[length=2mm]},thick}
+]
+% ---------------- input layer
+\draw[cont] (0,0) rectangle (14,-2.6);
+\node[anchor=west,font=\small\bfseries] at (0.3,-0.4) {Input layer: multi-bit logic};
+\node[tealbox,minimum width=4.4cm] (enc) at (3.0,-1.6) {\textbf{Delta encoder}\\{\footnotesize up / down spike wires}};
+\node[tealbox,minimum width=4.4cm] (rep) at (8.4,-1.6) {\textbf{Time replay counter}\\{\footnotesize restores spike timing}};
+\draw[arr] (enc.east) -- (rep.west);
+% ---------------- hidden layer
+\draw[cont] (0,-3.4) rectangle (14,-10.6);
+\node[anchor=west,font=\small\bfseries] at (0.3,-3.8) {Hidden layer: logic blocks};
+\foreach \x/\n in {1.9/d1,5.3/d2,8.7/d3,12.1/d4}{
+  \node[purpbox,minimum width=3.0cm] (\n) at (\x,-5.2) {\textbf{Dendrite}\\{\footnotesize stateless LUT4}};
+}
+\node[purpbox,minimum width=4.0cm] (mrg) at (7,-7.2) {\textbf{Merge LUT4}\\{\footnotesize combines 4 branches}};
+\node[purpbox,minimum width=4.6cm,line width=0.9pt] (soma) at (7,-9.2) {\textbf{Soma block}\\{\footnotesize LUT + FF, MUX on Q}};
+\node[greybox,minimum width=3.4cm] (tick) at (2.2,-9.2) {\textbf{Leak tick}\\{\footnotesize shared slow pulse}};
+\draw[arr] (rep.south) -- (8.4,-4.6);
+\draw[arr] (d1.south) -- (6.1,-6.6);
+\draw[arr] (d2.south) -- (6.7,-6.6);
+\draw[arr] (d3.south) -- (7.3,-6.6);
+\draw[arr] (d4.south) -- (7.9,-6.6);
+\draw[arr] (mrg.south) -- (soma.north);
+\draw[arr] (tick.east) -- (soma.west);
+\draw[arr] (9.3,-8.95) -- (10.3,-8.95) -- (10.3,-9.55) -- (9.3,-9.55);
+\node[anchor=west,font=\footnotesize] at (10.5,-9.25) {$y\rightarrow x_2$};
+% ---------------- output layer
+\draw[cont] (0,-11.6) rectangle (14,-14.2);
+\node[anchor=west,font=\small\bfseries] at (0.3,-12.0) {Output layer: multi-bit logic};
+\node[tealbox,minimum width=4.0cm] (cnt) at (6.4,-13.2) {\textbf{Spike counter}\\{\footnotesize carry chain, per class}};
+\node[tealbox,minimum width=4.0cm] (arg) at (11.2,-13.2) {\textbf{Argmax}\\{\footnotesize largest count wins}};
+\draw[arr] (cnt.east) -- (arg.west);
+\draw[arr] (soma.south) -- (7,-11.1) -- (6.4,-11.1) -- (cnt.north);
+\end{tikzpicture}}
+\caption{Block architecture. The input and output layers use multi-bit logic. The hidden layer uses only LUT/FF/MUX blocks: stateless dendrite and merge LUTs (MUX on the LUT output) feed a soma block (MUX on the registered output) with self-feedback and a shared leak tick. Lateral links between somas are not drawn.}
+\label{fig:architecture}
+\end{figure}

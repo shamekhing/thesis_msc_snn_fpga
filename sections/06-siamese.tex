@@ -1,0 +1,21 @@
+\section{Siamese change detection with paired recurrent paths}
+\label{sec:siamese}
+A Siamese network processes two inputs through two branches that share parameters and compares the resulting representations. The use case here is detecting differences or changes between two observations. The idea is to run two recurrent paths $A$ and $B$ with the same cluster configuration (shared learned transition rules):
+\begin{align}
+s^A_{t+1} &= F(s^A_t, x^A_t), \\
+s^B_{t+1} &= F(s^B_t, x^B_t),
+\end{align}
+and compare state and transition differences,
+\begin{align}
+d_t &= s^A_t \oplus s^B_t, \\
+\Delta s^A_t &= s^A_t \oplus s^A_{t-1}, \\
+\Delta s^B_t &= s^B_t \oplus s^B_{t-1}.
+\end{align}
+The XOR is illustrative for binary encodings; other comparison functions or encodings may suit better. Instead of a one-cycle comparison output, a third logic cluster can keep its own state,
+\begin{align}
+c_{t+1} &= G\bigl(c_t, d_t, \Delta s^A_t, \Delta s^B_t\bigr),\\
+y_t &= H(c_t),
+\end{align}
+so that it can distinguish a brief mismatch from persistent, repeated, growing or resolving divergence. This is an experimental possibility, not a proven capability, and the comparison cluster is an addition for study, not a replacement for the recurrent hidden layer.
+
+\paragraph{Research question.} Can Siamese-style shared recurrent pathways and a recurrent comparison cluster detect meaningful changes in state trajectories more effectively, or at lower hardware cost, than simple combinational comparison or conventional Siamese feature-vector comparison?

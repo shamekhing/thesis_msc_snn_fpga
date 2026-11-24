@@ -1,0 +1,23 @@
+\section{Is the unit still a spiking neuron?}
+\label{sec:snnq}
+It depends on how strict the definition is. What remains spiking: units communicate with one-bit events on wires in discrete time (one clock is one step); each unit has persistent internal state; activity is driven by change, so a constant input produces no events; and the output is read as spike counts. Table~\ref{tab:lif} maps the LIF ingredients of the baseline onto Variant A.
+
+\begin{table}[t]
+\centering
+\caption{LIF ingredients and their counterparts in the logic-block unit (Variant A).}
+\label{tab:lif}
+\begin{tabular}{@{}p{4.2cm}p{9.5cm}@{}}
+\toprule
+LIF~\cite{windhager2024} & Logic-block unit\\
+\midrule
+Membrane potential & two state bits in the FF (four levels)\\
+Threshold & truth-table rows that drive the state to the firing state\\
+Leak & rows that return the state toward rest (needs a tick input, Sec.~\ref{sec:recover})\\
+Refractory behavior & state sequence after firing (peak, falling, rest)\\
+Spike & $y=1$ in the firing state\\
+Reset & state transition after firing\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+What is lost: a weighted sum over many synapses (fan-in is four per LUT), a graded potential with decay constant $\beta$, and the timing information $\Delta t$. By the strict definition (integrate weighted inputs, leak, cross a threshold, reset), Variant A is therefore not an LIF neuron. It is a quantized four-state spiking unit, closest to a finite-state machine that emits spikes. Whether the name matters is secondary to whether the network classifies well, which is untested. The next section shows how the losses are recovered inside the same primitives.

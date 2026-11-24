@@ -1,0 +1,20 @@
+\section{Open questions and risks}
+\label{sec:open}
+\begin{enumerate}[leftmargin=1.5em]
+\item Does a recurrent logic unit offer a useful advantage over conventional recurrent networks, finite-state machines, Boolean dynamical networks, reservoir computing or weightless neural methods?
+\item Which tasks expose its strengths? Static classification alone may not reveal benefits of temporal state.
+\item Does a state-dependent receptive field give a measurable advantage over fixed inputs, or only more complexity?
+\item How should shared Siamese weights or configurations be trained or searched when the branches carry recurrent state?
+\item What is the best comparison signal: state mismatch, transition mismatch, event timing difference or learned comparison logic?
+\item Is a recurrent comparison cluster useful compared with a simple comparator, and at what resource/performance trade-off?
+\item Which FPGA physical effects are reliably controllable and appropriate to exploit? Intentional metastability, uncontrolled analog behavior and timing violations are not to be relied on as computation mechanisms.
+\item How do physical locality and routing topology affect the model and the hardware metrics?
+\item Are the transition tables and cluster-level dynamics interpretable after training or search and after composition into a network?
+\item A two-bit state sees only the last change; longer memory must come from depth, wider state or lateral loops. How much accuracy does this cost compared with the 97\% LIF reference?
+\item The dendrite tree costs about $n/3$ LUT4s per neuron for $n$ inputs. How sparse can connectivity be before accuracy suffers?
+\item Which training method (Section~\ref{sec:learning}) scales to the number of table bits needed?
+\item Online adaptation requires writable storage for the tables; what does it cost in logic and timing?
+\item Can the paper's decoupling of spike time and processing time survive recurrence, or does recurrence force a clock-locked design?
+\item Does a trained and enumerated few-bit neuron (Section~\ref{sec:ledger}) match the paper's accuracy at equal LUT count?
+\item Which of the questions in Section~\ref{sec:paper} can be answered by the authors, and which require reproduction?
+\end{enumerate}

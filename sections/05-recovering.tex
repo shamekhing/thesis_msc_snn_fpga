@@ -1,0 +1,16 @@
+\section{Recovering what is lost}
+\label{sec:recover}
+
+\subsection{Weighted sum over many synapses: dendrite tree}
+Each dendrite LUT4 is a small weighted vote over four spikes; the weights live in its table (each input counted $+1$, $-1$ or $0$, i.e.\ ternary weights). Merge LUT4s combine four branches each, and the dendrite-then-merge pattern repeats until all inputs are covered; 784 inputs need about five levels ($4^5=1024$). Dendrite and merge blocks use the MUX on the LUT output and are stateless; only the soma uses the MUX on $Q$. Registering every second level keeps the combinational path short.
+
+\paragraph{Cost.} A tree with fan-in four needs about $n/3$ LUT4s for $n$ inputs, so one neuron with 784 inputs costs roughly 260 LUT4s. On a device with about 20.7\,k LUT4 \verify{Tang Primer 20K, GW2A-18} a fully connected 100-neuron layer does not fit; each neuron should see a sparse subset (for example 16--64 inputs), or the image should be downsampled first. For graded weights, the tree can be replaced by the accumulator of~\cite{windhager2024} on the carry chain.
+
+\subsection{Graded potential and decay: wider soma and leak tick}
+The soma state can be widened from the four change states to an up/down saturating counter (still one LUT and one FF per state bit); more than four levels need LUT5 functions, built from two LUT4s and the slice mux \verify{check the vendor documentation for the target device}. A shared slow pulse, the leak tick, enters a spare LUT input; on each tick the table moves the state one step toward rest. The tick period sets the decay time constant and replaces $\beta$ of the baseline.
+
+\subsection{Spike timing: time replay and decoupling}
+The time replay counter in the input layer is the differential time code of~\cite{windhager2024} in clock time: it loads $\Delta t$, counts down and releases the spike at zero, so timing becomes clock timing. Long gaps need not be waited out: the leak tick can be fired $\Delta t$ times at full clock rate (fast-forward), which recovers the decoupling of spike time and processing time. A second option is a global clock-enable on all FFs that pulses only when the input advances, so that spike time stands still between events; it is not drawn in Fig.~\ref{fig:architecture}.
+
+\subsection{Lateral links}
+A neighbor's $y$ wired into $x_3$ or $x_4$ of a soma gives lateral recurrence inside a layer, which the baseline does not have.

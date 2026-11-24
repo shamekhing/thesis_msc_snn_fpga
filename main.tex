@@ -1,0 +1,60 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usepackage{enumitem}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+% Markers: red = work still to do, orange = fact to check against a primary source
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\verify}[1]{\textcolor{orange!80!black}{[verify: #1]}}
+% Idea ledger entry: title, label, status, idea, pros, cons, next test
+\newcommand{\ledger}[7]{\subsection[#1]{#1 \hfill {\small\textit{[#3]}}}\label{#2}%
+\noindent\textbf{Idea.} #4\par\smallskip
+\noindent\textbf{Pros.} #5\par\smallskip
+\noindent\textbf{Cons and risks.} #6\par\smallskip
+\noindent\textbf{Next test.} #7\par\medskip}
+
+\title{FPGA-Native Recurrent Logic Blocks as Spiking Hidden Units\\[0.4em]\large Investigation Draft}
+\author{Shamikh Al-Suwi}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+ Starting from the differential-time SNN architecture of Windhager et~al.\ and analyzing it in detail: claims, mechanisms, a derived cost model, evidence, strengths, weaknesses and open questions. we then collect every idea raised so far for using the FPGA's own logic block (a look-up table, a register and an output multiplexer, joined by routing feedback) as the hidden unit of a spiking network, each with pros, cons and a next test, followed by the detailed designs. Nothing here is final: ideas move between \emph{active}, \emph{parked} and \emph{rejected}, and \textbf{no experimental results exist yet}.
+\end{abstract}
+
+\tableofcontents
+
+\medskip\noindent\textbf{Markers.} \textcolor{red}{[TODO]} work still to do; \textcolor{orange!80!black}{[verify]} a fact to check against a primary source; \textit{[active]}, \textit{[parked]}, \textit{[rejected]} the current status of an idea. Numbers marked ``derived'' were computed from the paper's reported values, not reported by it.
+\newpage
+
+\input{sections/01-idea}
+\input{sections/02-background}
+\input{sections/02b-paper-analysis}
+\input{sections/02c-idea-ledger}
+\input{sections/03-unit}
+\input{sections/04-snn-question}
+\input{sections/05-recovering}
+\input{sections/06-siamese}
+\input{sections/07-learning}
+\input{sections/08-implementation}
+\input{sections/09-experiments}
+\input{sections/10-open-questions}
+
+\appendix
+\input{sections/A-brainstorm}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

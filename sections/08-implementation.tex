@@ -1,0 +1,20 @@
+\section{FPGA implementation notes}
+\label{sec:impl}
+\paragraph{Mapping.} The unit maps onto the vendor's own primitives: LUT, register, and the output MUX of the slice. On devices with only LUT4 primitives, a wider function is built from several LUT4s and the slice mux stages. The leak tick can use the clock-enable pin or a LUT input; the carry chain implements delta encoding at the input and counting at the output.
+
+\paragraph{Target board.} The current board is a Sipeed Tang Primer 20K (Gowin GW2A-18C), with roughly 20.7\,k LUT4, 15.6\,k FFs and 828\,Kbit of block RAM \verify{figures from the vendor datasheet}. Designs are loaded to SRAM only, so nothing is permanent and power-cycling restores the board.
+
+\paragraph{Sizing.} The baseline's 1000-neuron network is too large for this device (Table~\ref{tab:baseline}). A first target is a sparse network: for example the image downsampled to $14\times14$, about 100 hidden units with fan-in 16--64, and 10 output counters. \todo{size the first network against LUT/FF counts after a synthesis run}
+
+\paragraph{Speed (design estimate, not measured).} The baseline needs about 435\,k clock cycles per image because one datapath rotates through all synapses. In the proposed design every unit updates on every clock, so latency per time step is the pipeline depth rather than the synapse count. \todo{measure cycles per image; do not quote an estimate in the paper}
+
+\paragraph{Other devices.} Other FPGA families offer hard structures that may map onto further neuron features (accumulators with pattern detect, shift-register LUTs, dual-port block RAM, clock managers with dynamic phase shift, input delay taps, on-chip ADC, partial reconfiguration; see Appendix~\ref{app:brainstorm}). \verify{availability of each feature for any board that will be purchased}
+
+\paragraph{Build order.}
+\begin{enumerate}[leftmargin=1.5em]
+\item Reproduce the baseline in snnTorch (delta encoding with threshold 0.05, $\beta=0.5$, 4-bit weights).
+\item Write a bit-exact software model of the logic-block unit and of the whole network.
+\item Write the unit in SystemVerilog and test it in simulation against the bit-exact model.
+\item Add the layer structure (dendrite tree, soma, counters).
+\item Load to the board (SRAM only) and measure.
+\end{enumerate}

@@ -1,0 +1,73 @@
+\section{The recurrent logic unit}
+\label{sec:unit}
+
+\subsection{Variant A: one logic block}
+Fig.~\ref{fig:logic-block} shows the unit. The LUT has four input wires $x_1,\dots,x_4$. In the hidden layer the MUX selects the register output, so the block output $y$ is the stored state, and $y$ is routed back to one LUT input. With $x_1$ the incoming spike bit and $x_2=y$ the unit's own previous output, the next state is
+\begin{equation}
+y_{t+1} = T\bigl[x_{1,t},\,y_t,\,x_{3,t},\,x_{4,t}\bigr],
+\end{equation}
+where $T$ is the truth table. With $x_3,x_4$ unused, $T$ has four rows, i.e.\ four learned bits and $2^4=16$ possible units. The row index is the change between old and new bit (Table~\ref{tab:rows}); the stored bit says what the unit does in response.
+
+\begin{table}[t]
+\centering
+\caption{Rows of the two-input unit. $x_1$ is the new input bit, $x_2=y$ the previous output; the last column lists the four learned bits (rows $00,01,10,11$) for four example behaviors.}
+\label{tab:rows}
+\begin{tabular}{@{}cll@{\qquad}ll@{}}
+\toprule
+$x_1x_2$ & Meaning of the row & & Example unit & Stored bits\\
+\midrule
+00 & stays low & & follower ($y=x_1$) & 0\,0\,1\,1\\
+01 & falling & & hold ($y=x_2$) & 0\,1\,0\,1\\
+10 & rising & & latch high ($x_1\lor x_2$) & 0\,1\,1\,1\\
+11 & stays high & & toggle ($x_1\oplus x_2$) & 0\,1\,1\,0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{MUX modes.} With the MUX on $Q$ the block is a clocked state machine, which is the hidden-layer use. With the MUX on the LUT output the block is stateless; such a block must never be fed back into itself, because that would form a combinational loop with no clock. The free inputs $x_3,x_4$ can carry two more upstream spikes or a leak tick (Section~\ref{sec:recover}).
+
+\subsection{Variant B: logic cluster}
+A cluster contains several LUTs that process subsets or combinations of signals, state logic that combines their outputs, registers that retain state, muxes that select or route signals, and recurrent feedback. A LUT is a component of the cluster, not necessarily the neuron itself. A general abstraction is
+\begin{equation}
+s_{t+1} = F\bigl(s_t,\, b_1(x_t),\dots,b_K(x_t),\, q_t\bigr),
+\end{equation}
+where $s_t$ is the internal state, $b_i$ are branch LUT functions and $q_t$ are selected or routed signals. The output may be a spike, a state-change signal, a transition code or a multi-bit state, depending on the experiment. This is a conceptual starting point, not a finalized neuron definition. Variant A is the case $K=1$ with a two-bit state. \todo{decide which variant is the primary unit of the paper}
+
+\paragraph{State representation.} An illustrative two-bit encoding is 00 stable/low, 01 falling, 10 rising, 11 stable/high. State semantics and bit encoding are separate design variables; Gray, one-hot or learned encodings, and interpretations such as phase, event history or persistence, are all to be explored.
+
+\paragraph{State-dependent receptive field.} The current state can drive muxes that choose which incoming signals or branch functions the cluster examines at the next update, so the unit does not evaluate a fixed input subset every cycle. This has to be compared with static selection under equal hardware budgets.
+
+\subsection{Layers}
+Fig.~\ref{fig:architecture} shows the proposed network.
+\begin{description}[leftmargin=1.5em,style=nextline]
+\item[Input layer (multi-bit).] A delta encoder keeps the previous sample, subtracts and compares with a threshold, emitting signed events on two wires (up, down) per input. Alternatives are thermometer coding (bit $i$ is $x>\tau_i$, so a level crossing becomes a rise or fall in the unit watching that level) and sigma-delta coding (a one-bit stream whose average is the value). A time replay counter reproduces the differential-time code of~\cite{windhager2024} in clock time (Section~\ref{sec:recover}).
+\item[Hidden layers (logic blocks).] Rows of units as in Fig.~\ref{fig:logic-block}. Connectivity is set by place-and-route through the switch boxes, so wiring is chosen when the design is built. Each layer adds one clock of delay.
+\item[Output layer (multi-bit).] Counters tally the spikes of each class unit over $T$ steps and the largest count wins; alternatively an up/down counter reconstructs a value from rise and fall events. Carry chains suit both.
+\end{description}
+
+\paragraph{Relation to the paper's layer model.} The baseline processes one layer after another over stored spike trains. Clock-locked recurrent units cannot be hosted by that scheme; Section~\ref{sec:ledger} (recurrence) discusses what to keep, drop or replace.
+
+\input{figures/fig-logic-block}
+\input{figures/fig-architecture}
+
+\begin{table}[t]
+\centering
+\caption{Baseline~\cite{windhager2024} versus the proposed hidden layer.}
+\label{tab:compare}
+\small
+\begin{tabular}{@{}p{3.1cm}p{5.7cm}p{5.7cm}@{}}
+\toprule
+Aspect & Windhager et al. & This work\\
+\midrule
+Hidden unit & LIF: multi-bit potential, shifter decay, adder, comparator & LUT--FF(--MUX) state machine\\
+Parameters & 4--6-bit weights rotated through one shared datapath per layer & truth-table bits and wiring\\
+Next-spike-time stage & common stage per layer & none: all units update every clock\\
+Time handling & differential time code, processing decoupled from spike time & clock-locked; decoupling restorable (Sec.~\ref{sec:recover})\\
+Connectivity & fully connected, no links inside a layer & sparse fan-in; lateral and recurrent links possible\\
+Readout & spike count, largest wins & same\\
+Training & surrogate gradient (snnTorch) & open (Sec.~\ref{sec:learning})\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier

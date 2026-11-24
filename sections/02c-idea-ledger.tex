@@ -1,0 +1,129 @@
+\section{Idea ledger}
+\label{sec:ledger}
+Every idea raised so far, with pros, cons and a next test. Status tags are provisional: an idea can move between \emph{active}, \emph{parked} and \emph{rejected} as evidence comes in. Details of the designs follow in later sections.
+
+\ledger{Logic block (LUT--FF--MUX) as the hidden neuron}{idea:block}{active}
+{Use the logic block itself as a recurrent unit: the LUT sees a new input bit and the unit's own previous output, the FF stores the state, the MUX selects the registered path (Sec.~\ref{sec:unit}). The four rows of $(x_1,x_2)$ are the change between old and new bit; the four stored bits are what is learned.}
+{Smallest possible unit: one LUT and one FF. Maps onto the fabric without arithmetic, so many units fit and timing is short. Every unit updates in parallel on each clock. Only 16 possible functions, which makes exhaustive analysis possible.}
+{Fan-in of four limits what one unit sees; one or two state bits give coarse memory; no graded weights or potential; LUT contents are fixed by the bitstream, so on-chip learning needs extra writable storage. Accuracy on non-trivial tasks is unknown. Feed-forward LUT networks already exist (Sec.~\ref{idea:prior}).}
+{Bit-exact software model of one layer on synthetic temporal patterns (Sec.~\ref{sec:experiments}); then MNIST for reference.}
+
+\ledger{Change-state encoding (low, falling, rising, high)}{idea:states}{active}
+{Read the two-bit state, or the row index, as the change between old and new input rather than a value. Stable low and stable high are the saturated states; rising and falling are transitions.}
+{Matches an edge detector or up/down saturating counter; natural for temporal signals; fits the delta-coded input of the paper.}
+{The hidden layer repeats what the delta encoder already does at the input; a two-bit state remembers only the last change, so long dependencies need depth or feedback. Encoding is a free design variable and the proposed one may not be the best.}
+{Compare against Gray, one-hot and learned encodings at equal bits; check whether it beats a plain two-bit counter.}
+
+\ledger{Cluster of LUTs, dendrite tree and merge}{idea:cluster}{active}
+{A unit made of several branch LUTs, state LUTs, registers and muxes (Variant B). Dendrite LUT4s vote over four spikes each; merge LUT4s combine them; a soma block holds the state (Sec.~\ref{sec:recover}).}
+{Raises fan-in beyond four; branches are learned local nonlinearities; dendrite and merge blocks are stateless and can be combinational.}
+{About $n/3$ LUT4s per neuron for $n$ inputs: a 784-input neuron costs about 260 LUT4s and does not scale on small devices. Combinational depth lowers Fmax unless registered. Ternary weights only.}
+{Synthesize one neuron with 16, 64 and 256 inputs; record LUTs and Fmax; check accuracy against sparse versus dense connections.}
+
+\ledger{Complex multi-bit input and output layers}{idea:io}{active}
+{Keep input and output layers unrestricted: delta, thermometer or sigma-delta encoding at the input; counters, adder trees and argmax at the output; the hidden layer is the research focus.}
+{Puts complexity where arithmetic is cheap and useful; makes the hidden layer the clean object of study; carry chains suit counting.}
+{The multi-bit layers may dominate area and hide the benefit of the hidden layer; fair comparisons must count them.}
+{Report resource use per layer separately.}
+
+\ledger{Differential time and time replay at the input}{idea:replay}{active}
+{Keep the paper's differential time code at the input and add a time replay counter that loads $\Delta t$, counts down and emits the spike at zero, so timing becomes clock timing; a global clock-enable or fast-forwarded leak ticks recover the decoupling.}
+{Reuses the paper's bounded-width time representation; keeps spike time independent of processing time.}
+{Adds a counter per input; clock-locked hidden units cannot hold the paper's layer-sequential model; fast-forwarding many ticks costs cycles.}
+{Measure cycles versus Fmax for time replay against free-running clock-locked coding.}
+
+\ledger{Leak tick and wider soma state}{idea:leak}{active}
+{Widen the soma to an up/down saturating counter and add a shared slow tick that moves the state toward rest, so the tick period replaces the decay constant $\beta$.}
+{Restores a graded potential and leak using the same primitives; time constant is a single shared knob.}
+{More than four levels needs LUT5-sized functions on devices with only LUT4; one global tick gives one time constant for all units.}
+{Sweep state width and tick period on the temporal patterns.}
+
+\ledger{Enumerating a trained few-bit neuron into LUT contents}{idea:enumerate}{active}
+{Limit the paper's neuron to a few-bit potential and small fan-in, train it with surrogate gradients as the paper does, then tabulate its update function into the truth table. The LUT becomes the neuron by construction. Emerged from the review of the paper.}
+{Keeps the paper's training pipeline and delta coding; no arithmetic in the neuron; gives a trained starting point for later search.}
+{A trained network needs few-bit potential and small fan-in, which may cost accuracy; surrogate-gradient training is a gradient method, which conflicts with the preference for non-gradient learning.}
+{Sweep potential bits (1--4) and fan-in (2--6) in snnTorch and record accuracy against the paper's Table~I.}
+
+\ledger{Training by reinforcement, evolution or a reward-modulated rule}{idea:rl}{active}
+{Learn table bits and wiring from a score, using REINFORCE on bit probabilities, evolutionary search in a bit-exact simulator, or a local rule with one global reward (Sec.~\ref{sec:learning}).}
+{Needs no gradient; matches the hardware exactly; a local rule could run on chip.}
+{High variance and a huge search space with one global reward; the cost grows with the number of bits; a local rule needs writable tables.}
+{Run search on a ${\sim}100$-unit network, from scratch and from the enumerated solution, and compare sample counts.}
+
+\ledger{Differentiable relaxation of tables}{idea:diff}{parked}
+{Replace tables by soft functions of probabilities and train by gradient descent, as in differentiable logic-gate networks.}
+{Proven for feed-forward logic networks; efficient with GPUs.}
+{The author prefers non-gradient learning; recurrent state with independence assumptions drifts from the hard network; not pursued.}
+{Revisit only if search fails.}
+
+\ledger{Stochastic spiking with an LFSR, and random-address LUT weights}{idea:stoch}{parked}
+{Treat a stored $w$-bit value as a firing probability $w/2^w$ by comparing with a shared LFSR; or feed random bits to the LUT address so that the popcount of stored bits is the weight (five levels for four rows).}
+{Cheap in logic; gives graded effective weights from bits; noise can regularize and helps stochastic rounding for learning.}
+{Needs more time steps for the same accuracy (variance shrinks as $1/T$); LFSR correlation between units can bias results; popcount gives redundant patterns with identical weight.}
+{Compare error against a deterministic counter at equal time steps.}
+
+\ledger{Quantum computing}{idea:quantum}{rejected}
+{Add quantum amplitudes or quantum computing to the LUT neuron.}
+{None for this hardware.}
+{On an FPGA it is only a simulation of amplitudes, which needs more bits and multipliers, the opposite of what a LUT-based network is for.}
+{None.}
+
+\ledger{Physical effects: metastability, ring-oscillator jitter, RC and input-buffer threshold}{idea:physical}{rejected}
+{Use the chip's own electrical behavior as probabilistic or threshold elements: a flip-flop sampled at the edge of its setup window, ring oscillators as pacemakers or noise sources, an RC on a pin as a membrane and the input buffer as comparator, glitches as coincidence detectors, shared supply droop as coupling.}
+{Biological analogies are tempting; some cost almost no logic.}
+{Behavior depends on temperature, voltage and each chip; the toolchain fights metastability and loops; RC needs external parts; results would not reproduce. Per the research notes none should be relied on as a computation mechanism; at most ring oscillators serve as a noise source for random bits.}
+{None planned.}
+
+\ledger{Primitive-level mappings on the fabric}{idea:primitives}{parked}
+{Map biological parts onto device primitives: carry chain as membrane integrator, distributed RAM as a writable truth table (plastic dendrite), LUT5--LUT8 mux stages as dendritic tree, asynchronous reset as refractory period, clock enable as sparsity or neuromodulation, latches and loops as unclocked neurons.}
+{Closest to the hardware; several parts (carry chain, distributed RAM) are available even on small devices.}
+{Vendor-specific; asynchronous and loop structures fight the timing tools; distributed RAM costs logic.}
+{Pick carry-chain integrator and distributed-RAM table for a small prototype.}
+
+\ledger{Other devices and hard blocks as analogies}{idea:hardblocks}{parked}
+{Accumulator with pattern detect (DSP) as soma, shift-register LUTs as axonal delay, dual-port block RAM as synapse matrix, clock managers and input delay taps for time constants and latency coding, on-chip ADC and temperature sensing for homeostasis, partial reconfiguration for structural plasticity, flash versus SRAM configuration as long- versus short-term memory, hard CPU as neuromodulator (Appendix~\ref{app:brainstorm}).}
+{Many map directly to biological functions; available on mainstream families.}
+{Needs a new board; features differ by vendor and part; each adds complexity before the basic unit is proven.}
+{Revisit after the board decision (Sec.~\ref{idea:board}).}
+
+\ledger{State-dependent receptive field}{idea:rf}{parked}
+{The unit's state drives muxes that choose which inputs or branches it reads next.}
+{Dynamic selection could replace fixed fan-in at equal resources.}
+{Adds mux logic and routing; may only add complexity; hard to train.}
+{Ablation: static versus state-selected inputs at equal LUT budget.}
+
+\ledger{Siamese paired paths and a recurrent comparison cluster}{idea:siamese}{parked}
+{Two recurrent paths with shared tables compare states and transitions; a third cluster keeps mismatch history (Sec.~\ref{sec:siamese}).}
+{Natural for change detection; sharing is free in hardware (same configuration).}
+{Not grounded in the paper; training shared recurrent tables is unsolved; a mismatch-fed LIF neuron or counter is the baseline it must beat.}
+{Synthetic change-detection suite against that baseline.}
+
+\ledger{Recurrence and lateral links versus the paper's layer model}{idea:recurrence}{active}
+{A neighbor's output into $x_3/x_4$, or feedback across layers.}
+{Real recurrent dynamics inside a layer; the paper has none.}
+{The paper processes layers one after another over stored spike trains, which cannot host feedback; recurrence needs a global time order (clock-locked updates or a global event queue), which may dissolve the paper's decoupling.}
+{Compare clock-locked recurrence with the paper's layer-sequential model on a task that needs memory.}
+
+\ledger{Sparse versus full connectivity}{idea:sparse}{active}
+{Give each unit a small, chosen set of inputs.}
+{Required by fan-in four; saves area; physically local wiring is cheaper.}
+{The paper's scan gains nothing from sparsity; sparse networks can lose accuracy; choosing the wiring is a search problem.}
+{Accuracy versus fan-in on MNIST and on temporal patterns.}
+
+\ledger{On-chip learning and writable tables}{idea:online}{parked}
+{Change table bits at run time.}
+{Adaptation without a host.}
+{Normal LUT contents are fixed by the bitstream; writable storage (registers or distributed RAM) multiplies cost; partial reconfiguration is device-specific.}
+{Measure the cost of a registered table against a LUT.}
+
+\ledger{Prior art: LUT, weightless and Boolean networks}{idea:prior}{active}
+{Place the idea against differentiable logic-gate networks~\cite{petersen2022}, differentiable weightless networks~\cite{bacellar2024}, LogicNets~\cite{umuroglu2020} and NeuraLUT~\cite{andronic2024}, and against Boolean networks, finite-state machines and reservoir computing.}
+{Shows what is borrowed and what could be new; the state-carrying recurrent unit with delta/differential-time coding may be the open part.}
+{The feed-forward part is not new; the recurrent part may also have prior art that I have not found.}
+{\todo{systematic literature search before any novelty claim}}
+
+\ledger{Board choice}{idea:board}{active}
+{Stay on the Tang Primer 20K (GW2A-18C) for LUT-level work, or buy a board with DSP accumulators, shift-register LUTs, dual-port RAM, clock managers, delay taps, ADC and partial reconfiguration, such as an Artix-7 or Zynq-7000 board.}
+{The Tang 20K is available now and fully sufficient for the unit and small networks; a richer board enables the analogies above.}
+{The 20K cannot hold the paper's 1000-neuron network; a new board adds cost and a different toolchain.}
+{Decide after the first synthesis results show which resources are the bottleneck.}

@@ -1,0 +1,28 @@
+\section{Brainstorm: FPGA structures as biological analogies}
+\label{app:brainstorm}
+Ideas collected while exploring how FPGA-native structures could stand in for biological ones. None is selected or tested; availability differs by device family \verify{per device}.
+
+\begin{table}[h]
+\centering
+\caption{FPGA structure, biological analogue and possible use.}
+\begin{tabular}{@{}p{3.4cm}p{3.2cm}p{7.6cm}@{}}
+\toprule
+FPGA structure & Biological analogue & Possible use\\
+\midrule
+Accumulator with pattern detect / overflow (DSP block) & soma & weights add into the accumulator, threshold compare in the block; cascade ports chain dendritic sums\\
+LUT as shift register & axonal or synaptic delay & tap select as a learnable delay\\
+Dual-port block RAM & synapse matrix & read on spike arrival while a second port writes (plasticity); address-event style access\\
+Clock managers, dynamic phase shift & time constants, neuromodulation & one clock per population; run-time frequency change as global gain\\
+Input delay taps & latency coding & sub-clock spike timing, time-to-first-spike\\
+On-chip ADC and temperature sensor & sensing, interoception & analog input; homeostatic control from die state\\
+Partial reconfiguration & structural plasticity & grow or prune units; fast weights in RAM, slow wiring in configuration\\
+Flash vs SRAM configuration & long vs short-term memory & structure persists through power-off, state does not\\
+Hard CPU next to the fabric & neuromodulatory nuclei & slow supervisor writes thresholds and learning rates into fabric registers\\
+Per-chip defects and delay variation & degeneracy, heterogeneity & train in the loop on the specific die\\
+Serial transceivers, hard NoC & long-range tracts & spike packets between populations or boards\\
+Clock enable / gating & sparsity & update only units that receive events\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Stochastic spiking.} Treating a stored $w$-bit value as a firing probability $w/2^w$ by comparing it with a shared LFSR is cheap in logic; it needs more time steps for the same accuracy, and LFSR correlation between units can bias results. Physical noise sources (ring-oscillator jitter, metastability) were considered as true random bits but are not to be relied on (Section~\ref{sec:open}). \todo{find a published homeostatic SNN on an Artix-7 using dynamic partial reconfiguration of neuron clocking, which would support the clock-manager row}

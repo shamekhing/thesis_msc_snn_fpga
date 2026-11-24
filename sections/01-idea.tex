@@ -1,0 +1,9 @@
+\section{Research idea}
+\label{sec:idea}
+The direction is to investigate hidden neural computation built from FPGA-native logic structures, rather than implementing an ordinary SNN on an FPGA or mapping a conventional neuron onto a processor-style datapath. The computational unit is made of the resources every logic block already contains: a look-up table (LUT), a register (flip-flop, FF) and an output multiplexer (MUX), with feedback through the routing fabric. Two variants are considered (Section~\ref{sec:unit}): the minimal unit, a single LUT--FF--MUX block, and a cluster of several such blocks working together.
+
+\paragraph{Layer roles.} Input and output layers are unrestricted and may use conventional multi-bit arithmetic (delta encoding, counters, argmax). The focus is the hidden layer, whose units are recurrent logic blocks or clusters.
+
+\paragraph{Status of claims.} Behaviors listed in this document (temporal-pattern recognition, coincidence detection, event ordering, persistence, repeated-event detection, suppression, change direction) are hypotheses to test, not presumed advantages.
+
+\paragraph{Novelty discipline.} Siamese comparison, recurrent dynamics, SNN temporal encoding, logic-based neural computation and change detection each have prior literature, and their combination is not itself a novelty claim. A contribution has to be established through a literature review and measured results, plausibly around the FPGA-native recurrent hidden unit, its state-transition structure, its resource and timing behavior, and recurrent trajectory comparison inside that structure. \todo{literature review: recurrent LUT-based units, Boolean networks, weightless networks, reservoir computing}

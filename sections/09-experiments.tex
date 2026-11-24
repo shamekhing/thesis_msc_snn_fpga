@@ -1,0 +1,17 @@
+\section{Experimental plan}
+\label{sec:experiments}
+
+\subsection{Temporal-pattern discrimination}
+Use sequences where order, persistence, repetition or transition matters, for example 000111, 111000, 101010, 100010 and 001100. Compare the recurrent logic design with feedforward LUT logic, a conventional recurrent baseline and other relevant logic-based networks under controlled capacity.
+
+\subsection{Change detection with paired paths}
+Evaluate paired-input comparison (Section~\ref{sec:siamese}) first on synthetic temporal signals with known changes: transient, sustained, repeated and reversed changes, and changes of event order. Then consider temporal image or motion data. Conventional Siamese networks serve as an algorithmic baseline; the recurrent cluster structure stays the research target.
+
+\subsection{Image classification reference}
+Use the delta-encoded MNIST setup of~\cite{windhager2024} as a reference point: compare a quantized LIF network and the logic-block network under the same resource budget.
+
+\subsection{Scaling and ablations}
+Sweep cluster size and state width. Ablate recurrence, comparison memory, state-dependent mux selection, branch LUT count, leak tick, time replay and state encoding. An improvement is not attributed to a feature unless an ablation isolates it.
+
+\subsection{Measurements}
+Record task accuracy and other task-appropriate scores, LUT and logic usage, flip-flop count, maximum clock frequency, critical-path delay, latency in cycles, throughput, switching activity or power when measurable, routing and congestion indicators, and optimization (training) cost. Compare designs under fair resource budgets and document toolchain and device differences.

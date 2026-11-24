@@ -1,0 +1,112 @@
+\section{Analysis of the reference paper}
+\label{sec:paper}
+This section analyzes Windhager, Moser and Lunglmayr~\cite{windhager2024} in detail, because every extension below is measured against it. The aim is to separate what the paper claims, what its evidence shows, and what it leaves open. Numbers in quotation of the paper are marked ``reported''; numbers computed from them are marked ``derived'' and are only as good as the assumptions stated. Open points are phrased as questions, since several may be answered by details the short conference format left out.
+
+\subsection{Claims and contributions}
+The paper states three contributions: (a) a low-complexity architecture that processes full layers of an SNN using differential time encoding of spike trains, decoupling spike time from processing time; (b) inference results on MNIST that it describes as superior to a recent state-of-the-art solution; (c) robustness to quantization, with high accuracy down to 4-bit weights. Two further claims appear in the text: the design needs no multipliers, and more than 1000 neurons fit on a moderately sized FPGA.
+
+\subsection{Encoding}
+\paragraph{What it does.} The input is delta encoded: a spike of signed amplitude is emitted when the change of the signal exceeds a threshold (0.05 in the experiment). Spike times are stored as differences $\Delta t_k=t_k-t_{k-1}$ in sign-magnitude form. Because sign-magnitude has a negative zero, an amplitude $a>1$ is written as one unit spike followed by $a-1$ spikes with $\Delta t=0$. The all-ones pattern is reserved as a timer-overflow spike that carries only the passage of time, so the width of $\Delta t$ can be chosen freely: fewer bits mean more overflow spikes.
+
+\paragraph{Observations.}
+\begin{itemize}[leftmargin=1.5em]
+\item The scheme removes the growing absolute timestamp of address-event representation (AER); neuron identity is not needed either, because connections are fixed wires.
+\item The trade-off between the width of $\Delta t$ and the number of overflow spikes is described but not quantified; no plot or number is given for MNIST.
+\item An amplitude $a$ costs $a$ spike slots, so the processing cost of strong changes grows linearly with amplitude.
+\item Delta encoding versus rate coding is motivated in the introduction but never compared in the paper's own experiments.
+\end{itemize}
+
+\subsection{Neuron model}
+Equation~\eqref{eq:lif} is the event-driven LIF update: the decay $\beta^{\Delta t}$ is applied lazily at the time of the next input, with $\Delta t$ the time since the last update. With $\beta=2^{-i}$ it is a right shift by $i\,\Delta t$ bits. Reset subtracts the threshold with the sign of the spike, and because several spikes can occur at $\Delta t=0$, the reset is a modulo operation (``reset-to-mod''). An arbitrary decay is claimed to be obtainable by globally scaling all spike times by $\lambda=\log\beta/\log 2^{-i}$.
+
+\paragraph{Observations and questions.}
+\begin{itemize}[leftmargin=1.5em]
+\item \emph{Time scaling.} Scaling all times by a non-integer $\lambda$ changes the time grid, the width of $\Delta t$ and the number of overflow spikes, and requires rounding; this is not discussed. A global $\lambda$ also gives all layers the same time constant, so heterogeneous time constants (useful for temporal tasks) are not available.
+\item \emph{Training--hardware equivalence.} Training uses snnTorch's \texttt{LeakySurrogate} neuron in discrete time steps. The hardware updates only at event times, resets immediately and can emit several spikes at one instant. My recollection is that snnTorch derives the reset from the previous step's membrane potential and emits at most one spike per step \verify{check snnTorch implementation}. If so, the semantics differ, and the paper does not say whether the reported accuracies come from the hardware-exact model or from snnTorch with quantized weights.
+\item \emph{Negative spikes.} The experiments use only a positive threshold of one, so $\theta_{\text{low}}$ and negative output spikes are not exercised.
+\item The fixed threshold of one means the weight scale carries all gain; how the 4--9-bit grid is scaled relative to the threshold is not stated.
+\end{itemize}
+
+\subsection{Hardware architecture}
+\paragraph{Layer structure.} Each layer is fully connected to the previous one; there are no connections inside a layer. Every neuron of the SNN maps to one physical neuron. A layer produces whole vectors of differentially encoded spike data, which the next layer consumes, so layers are processed one after another and spike trains between layers must be stored. If a network does not fit, a subnetwork is reused and intermediate spike data go to memory.
+
+\paragraph{Common stage of a layer (Fig.~3 of the paper).} Each input synapse has a buffer, an absolute-value block and an integrator that converts differential time to absolute time $t_i$. The $n$ times are rotated $n$ times through a comparator to find the minimum, which is the time of the next incoming spike; the stage also holds the current time $t_\text{curr}$ and last time $t_\text{last}$. Integrators are reduced whenever an overflow spike is emitted, so their width stays bounded. This stage exists once per layer, because all neurons see the same inputs.
+
+\paragraph{Neuron core (Fig.~4 of the paper).} A rotation register holds the neuron's weights and rotates in step with the common stage. When a new minimum is found, a weight accumulator restarts; spikes with the same time are added to it. The accumulated weight is added to the decayed potential (decay by shifter), the result is compared with the threshold, and an output spike is encoded relative to a last-spike-time register. No multiplier is used because spike amplitudes are integers.
+
+\subsection{Derived cost model}
+\label{sec:costmodel}
+\paragraph{Latency.} Finding the next spike time takes one rotation of $n$ entries, i.e.\ $n$ clock cycles, per distinct input spike time. For a layer with $n$ inputs and $E$ distinct spike times, latency is about $nE$ cycles, independent of the number of neurons in the layer (all neurons rotate in parallel). For the 784--1000--10 network this gives $784E_1+1000E_2$ if the layers run one after another. The reported 435\,368 cycles per image would correspond to about 555 rotations if all cost were in the first layer and about 435 if all were in the second (derived: $435\,368/784$ and $435\,368/1000$). The paper gives no breakdown, so this is a hypothesis to test by counting delta events per MNIST image.
+
+\paragraph{Consequences.}
+\begin{itemize}[leftmargin=1.5em]
+\item Latency scales with fan-in times the number of events, not with the number of neurons: neuron count is cheap in time and expensive in area.
+\item Cutting a connection by setting its weight to zero (as the paper suggests) does not shorten the scan, since the entry is still rotated past. Sparsity saves nothing in latency in this scheme.
+\item The reported 838 images/s is consistent with the cycle count (derived: $435\,368/365\,\mathrm{MHz}\approx1.19$ ms, i.e.\ $\approx838$ images/s).
+\end{itemize}
+
+\paragraph{Storage.} Hidden-layer weights alone are $784\times1000\times6\approx4.70$ Mbit and output weights about 60 kbit at 6 bits (derived). The reported 57\,659 registers are far below this, so the weights must live in block or distributed RAM; the paper reports no BRAM, LUT-RAM or DSP counts, and the storage for intermediate spike trains is not quantified.
+
+\paragraph{Power.} Energy per image times throughput gives an implied average power of about 4.6 W for this design ($5.46\,\mathrm{mJ}\times838\,\mathrm{s^{-1}}$) and about 1.6 W for the compared design ($5.04\,\mathrm{mJ}\times320\,\mathrm{s^{-1}}$), both derived. The new design is faster but draws more power, so energy per image is not improved.
+
+\subsection{Experimental evidence}
+\paragraph{Setup (reported).} 784 inputs, 1000 hidden and 10 output neurons; the output neuron with most spikes wins; threshold one, positive spikes only; snnTorch Tutorial~5 with \texttt{LeakySurrogate}, pixels in $[0,1]$, 100 epochs; delta threshold 0.05; $\beta=0.5$; ``the spike sequence of an image is fed into the network in parallel 28 times'' (meaning unclear to me: 28 image rows, 28 time steps or 28 copies). Results are in Table~\ref{tab:baseline}.
+
+\paragraph{Observations.}
+\begin{enumerate}[leftmargin=1.5em]
+\item \emph{Static data only.} MNIST images are static, and ``time'' is the pixel scan index. The central selling point, differential time with decoupled processing, is never tested on data with real temporal structure (event camera, audio, time series), although the cited prior work~\cite{moser2017,lunglmayr2021} is about sampled signals.
+\item \emph{No ablation of the ingredients.} There is no comparison of delta versus rate coding, differential versus absolute time, or with and without overflow spikes. The accuracy gap to the compared design (97.00\% versus 92.92\%) may come from training, network size or precision rather than from the architecture.
+\item \emph{Single run, no spread.} For a 10\,000-image test set the standard error at 97\% is about 0.17 percentage points (derived: $\sqrt{0.97\cdot0.03/10^4}$). The differences between 6 and 9 bits (97.00--97.08\%) are well inside that, so only the drop at 4 and 5 bits is clearly visible.
+\item \emph{Quantization study.} Only weights are quantized, apparently after training (``running the SNNs with the quantized weights''). Whether quantization-aware training was tried, how the scale is chosen, and which accumulator and potential widths guarantee ``no further quantization effects'' are not given.
+\item \emph{Like-for-like comparison.} The compared design~\cite{li2021fast} uses 16-bit floats on a Virtex-7, supports online learning, and sits on an older process generation \verify{28 nm Virtex-7 versus 16 nm UltraScale+}. How power and energy were measured, and whether on board or chip level, is not stated.
+\item \emph{Resource figures.} 108\,894 ``CLBs'' cannot be CLBs for a ZCU102-class device, which has roughly a third of that many CLBs and about 274\,k LUTs \verify{vendor datasheet}; it looks like a LUT count. No breakdown into LUT, BRAM, DSP, no utilization percentage, and no statement whether 365 MHz is a target or achieved timing.
+\item \emph{Latency distribution.} The cycle count is an average; since the design is event driven, it varies per image, and the worst case matters for real-time use.
+\item \emph{Reproducibility.} Training hyperparameters beyond the tutorial setup and the availability of code or bitstreams are not stated.
+\item \emph{Editorial.} Table~I carries the caption of Table~II.
+\end{enumerate}
+
+\subsection{Strengths}
+\begin{itemize}[leftmargin=1.5em]
+\item A clear, simple idea: store time differences, keep integrators bounded with overflow spikes, and let processing time run on its own clock.
+\item Multiplier-free arithmetic, because inputs are integer-amplitude spikes and decay is a shift.
+\item Robust to coarse weights: 95.84\% at 4 bits is a strong result for a $784\text{--}1000\text{--}10$ network.
+\item A neuron count that is free in time: every neuron in a layer works in parallel on the same rotation.
+\item An honest, explicit trade-off between $\Delta t$ width and overflow-spike count, and a path to subnetwork reuse for large networks.
+\end{itemize}
+
+\subsection{Limits implied by the architecture}
+\begin{itemize}[leftmargin=1.5em]
+\item The serial scan makes latency proportional to fan-in times event count, and sparsity does not help.
+\item Layer-by-layer processing with stored spike trains rules out recurrence and lateral connections unless a global time ordering across layers is added. This directly affects the recurrent unit proposed here (Section~\ref{sec:ledger}).
+\item Fully connected layers only; no convolution or weight sharing, which hurts for images.
+\item One global $\beta$; no heterogeneous time constants.
+\item No online learning; training is offline in software, and its equivalence to the hardware is unverified.
+\end{itemize}
+
+\subsection{Questions for discussion with the author}
+\begin{enumerate}[leftmargin=1.5em]
+\item Are the Table~I accuracies from bit-exact hardware simulation or from snnTorch with quantized weights? Was quantization post-training?
+\item What does ``fed into the network in parallel 28 times'' mean, and how many delta spikes does an average image produce?
+\item Where do the 435\,368 cycles go (layer 1, layer 2, overhead), and what are the best and worst cases?
+\item Where are the weights stored, and what are the LUT, BRAM and DSP counts? What does the ``CLBs'' entry count?
+\item How were energy and power obtained (measured on board, estimated by the tool, which parts included)?
+\item What accumulator and potential widths were used, and what do narrower ones cost in accuracy?
+\item Were rate coding and absolute-time coding ever compared in the same network?
+\item How does the design behave on data with real temporal structure?
+\item How does the training model's reset and spike semantics match the hardware's reset-to-mod?
+\item Can the scan be replaced by a faster minimum search without losing the decoupling?
+\item Is a per-layer or per-neuron decay practical with the time-scaling argument?
+\item Are code, bitstreams or RTL available for reproduction?
+\end{enumerate}
+
+\subsection{Directions the paper opens}
+\begin{enumerate}[leftmargin=1.5em]
+\item Reproduce the result and verify the cost model by counting delta events per image.
+\item Extend Table~I below 4 bits and to the membrane potential.
+\item Replace the rotation with a faster next-event search (parallel minimum tree, sorted event queue, time wheel) and measure the cycle count.
+\item Fan out events directly (AER-style: look up the targets of each spike) so that pruned weights save time; compare with the scan for sparse spike trains.
+\item Evaluate on temporal datasets (event camera, audio, ECG) where decoupled time should matter.
+\item Allow per-layer decay and test the time-scaling argument.
+\item Recurrence through a global event queue.
+\item Enumerate a few-bit neuron core into LUT contents (Section~\ref{sec:ledger}).
+\end{enumerate}

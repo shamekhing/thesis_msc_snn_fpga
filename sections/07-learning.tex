@@ -1,0 +1,28 @@
+\section{Forward pass and learning}
+\label{sec:learning}
+
+\subsection{Forward pass}
+One clock is one time step. The input is delta-encoded into spikes. Every hidden unit takes $x_1$ from the layer below and its own $y$ (and optionally $x_3,x_4$), the LUT outputs the next state and the FF stores it; all units in all layers update at the same clock edge. Output units are counted over $T$ steps and the largest count wins. The whole pass is 0/1 logic.
+
+\subsection{Why plain backpropagation does not apply}
+The parameters are truth-table bits and wiring choices, so flipping a bit has no slope; the state is recurrent, so credit would have to travel through time as well as through layers; and counting followed by argmax is not differentiable.
+
+\subsection{Candidate methods}
+No training method is selected. The author's preference is for reinforcement-style and search methods that only need a score from the exact bit-level simulator.
+\begin{description}[leftmargin=1.5em,style=nextline]
+\item[Policy gradient (REINFORCE).] Give every table bit a probability $p_i$, sample a whole network (bit $\beta_i\sim\mathrm{Bernoulli}(p_i)$), run a batch and obtain a reward $R$. Update $p_i \leftarrow p_i + \alpha\,(R-b)(\beta_i-p_i)$ with a running baseline $b$ and clip to $[0,1]$. It is noisy, so use many samples and the same input batch for a whole population.
+\item[Evolutionary search.] Keep a population of tables, flip a few random bits, score each in a bit-packed simulator and keep the best. It matches the hardware exactly and is easy to debug.
+\item[Reward-modulated local rule.] Each unit keeps an eligibility trace of the row it used; one global reward wire says good or bad, and traced rows move toward or away from the output they produced. This could run on chip but needs writable table storage (registers or distributed RAM), because ordinary LUT contents are fixed by the bitstream.
+\item[Enumeration of a trained few-bit neuron.] Train the paper's LIF neuron with surrogate gradients under a few-bit potential and small fan-in, then tabulate its update into the truth table. This gives a trained starting point, and search (above) can refine it locally.
+\item[Differentiable approximations (set aside).] Relaxing gates or tables to soft functions is used for feed-forward logic in~\cite{petersen2022,bacellar2024}; related LUT-network flows are~\cite{umuroglu2020,andronic2024}. Not pursued here. \todo{check for published work on recurrent, state-carrying LUT units}
+\end{description}
+
+\paragraph{Reward.} Plain accuracy is too sparse. A margin works better: spike count of the correct class minus the best wrong class, averaged over a batch. For the output layer a local signal also works: reward the correct unit for firing and punish wrong ones.
+
+\paragraph{Credit assignment.} One global reward spread over thousands of bits is hard because most bits do not matter for a given sample. Training layer by layer, giving each layer a small readout, and starting with a small network (about 100 units with a few bits each, i.e.\ roughly $10^3$ bits) reduce the problem.
+
+\paragraph{Hardware-aware objective.} The objective may combine task performance with resource use, timing and activity,
+\begin{equation}
+L_{\text{total}} = L_{\text{task}} + \lambda_R L_{\text{resources}} + \lambda_T L_{\text{timing}} + \lambda_A L_{\text{activity}},
+\end{equation}
+but its form and weighting remain open.

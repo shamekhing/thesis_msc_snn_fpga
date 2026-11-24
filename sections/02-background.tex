@@ -1,0 +1,42 @@
+\section{Background}
+\label{sec:background}
+
+\subsection{FPGA fabric}
+Island-style FPGAs consist of a grid of logic blocks, a routing fabric of wire segments joined by switch boxes and connection blocks, and I/O blocks at the edge~\cite{boutros2021,kuon2008,betz1999}. A basic logic block contains a $k$-input LUT whose output goes both to the D input of a flip-flop and directly to an output MUX; the MUX picks the combinational or the registered path (Fig.~\ref{fig:logic-block}). Dedicated carry signals link neighboring blocks. Truth tables come from the configuration bitstream, so in SRAM-based devices they are not writable as ordinary data at run time and vanish at power-off.
+
+\subsection{The reference paper in brief}
+Windhager et~al.~\cite{windhager2024} propose a lightweight SNN layer architecture for digital hardware built on delta-encoded inputs, differential spike-time coding and a LIF neuron with power-of-two decay,
+\begin{equation}
+P_k = r_f\!\left(P_{k-1}\,\beta^{\Delta t} + \sum_i w_i s_i\right),
+\qquad
+r_f(P)=
+\begin{cases}
+P, & \theta_{\text{low}}<P<\theta_{\text{high}}\\
+P-\theta_{\text{low}}, & P\le\theta_{\text{low}}\\
+P-\theta_{\text{high}}, & P\ge\theta_{\text{high}}.
+\end{cases}
+\label{eq:lif}
+\end{equation}
+Table~\ref{tab:baseline} lists the reported results. Section~\ref{sec:paper} analyzes the paper in detail.
+
+\begin{table}[t]
+\centering
+\caption{Reported results of the baseline~\cite{windhager2024} (MNIST, 784--1000--10 network). Values copied from the paper.}
+\label{tab:baseline}
+\begin{tabular}{@{}lcc@{\qquad}lc@{}}
+\toprule
+Weight bits & Accuracy & & Metric & Zynq ZCU102 (this paper)\\
+\midrule
+4 & 95.84\% & & Max.\ clock & $\approx$365 MHz\\
+5 & 96.90\% & & Clock cycles (avg.) & 435\,368\\
+6 & 97.00\% & & Images/s & $\approx$838\\
+7 & 97.07\% & & Energy & 5.46 mJ/image\\
+8 & 97.05\% & & CLBs & 108\,894\\
+9 & 97.08\% & & Registers & 57\,659\\
+\bottomrule
+\end{tabular}
+\\[0.4em]
+{\footnotesize The compared design~\cite{li2021fast} (Virtex-7 VC707) is reported at $\approx$100 MHz, 92.92\% accuracy, $\approx$320 images/s and 5.04 mJ/image.}
+\end{table}
+
+Related event-based hardware includes TrueNorth~\cite{akopyan2015} and Loihi~\cite{davies2021}; SNN surrogate-gradient training is covered by snnTorch~\cite{eshraghian2023}.
